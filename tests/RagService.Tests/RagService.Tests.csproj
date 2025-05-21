@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RagService.Application\RagService.Application.csproj" />
+    <ProjectReference Include="..\..\src\RagService.Infrastructure\RagService.Infrastructure.csproj" />
   </ItemGroup>
+
 
 </Project>

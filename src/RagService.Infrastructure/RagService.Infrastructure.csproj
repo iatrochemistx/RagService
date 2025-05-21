@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RagService.Domain\RagService.Domain.csproj" />
+    <ProjectReference Include="..\RagService.Application\RagService.Application.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
