@@ -11,7 +11,7 @@ namespace RagService.Infrastructure.Llm
     /// </summary>
     public sealed class MockLlmService : ILLMService
     {
-        public Task<string> GenerateAsync(string query, IEnumerable<Document> contextDocs)
+        public Task<string> GenerateAsync(string query, IEnumerable<Document> contextDocs,CancellationToken cancellationToken = default)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"[MOCK LLM ANSWER] You asked: \"{query}\".");

@@ -15,7 +15,10 @@ namespace RagService.Infrastructure.VectorSearch
     /// </summary>
     public sealed class VectorSearchService : IVectorSearchService
     {
-        private readonly IEmbeddingService _embedder;
+
+ 
+   
+           private readonly IEmbeddingService _embedder;
         private readonly List<(Document Doc, float[] Vec, float Norm)> _index = new();
 
         public VectorSearchService(IEmbeddingService embedder)
@@ -26,13 +29,13 @@ namespace RagService.Infrastructure.VectorSearch
 
         /* ------------------  IVectorSearchService  ------------------ */
 
-        public async Task<List<Document>> GetTopDocumentsAsync(string query, int topK = 3)
+        public async Task<List<Document>> GetTopDocumentsAsync(string query, int topK = 3,CancellationToken cancellationToken =default)
         {
             var qVec = await _embedder.EmbedAsync(query);
             return GetTopDocumentsInternal(qVec, topK);
         }
 
-        public Task<List<Document>> GetTopDocumentsAsync(float[] queryVector, int topK = 3)
+        public Task<List<Document>> GetTopDocumentsAsync(float[] queryVector, int topK = 3, CancellationToken cancellationToken = default)
             => Task.FromResult(GetTopDocumentsInternal(queryVector, topK));
 
         /* ------------------  Internal helpers  ------------------ */
@@ -93,5 +96,7 @@ namespace RagService.Infrastructure.VectorSearch
                 sumSq += v[i] * v[i];
             return (float)Math.Sqrt(sumSq);
         }
+
+       
     }
 }
