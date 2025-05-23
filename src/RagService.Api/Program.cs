@@ -8,18 +8,25 @@ using RagService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// bind your OpenAI options
+// ---------------------------------------------------------------------
+// TEMPORARY: RUN 100 % IN MOCK MODE
+// ---------------------------------------------------------------------
+
+// You can leave this Configure call; it’s harmless in mock mode and
+// makes it easy to switch back to real OpenAI later.
 builder.Services.Configure<OpenAiOptions>(
     builder.Configuration.GetSection("OpenAI"));
 
-// register real OpenAI clients
-builder.Services.AddHttpClient<IEmbeddingService, OpenAiEmbeddingService>();
-builder.Services.AddHttpClient<ILLMService,     OpenAiLlmService>();
+// Register **mock** services (no HTTP calls, deterministic behaviour)
+builder.Services.AddSingleton<IEmbeddingService, MockEmbeddingService>();
+builder.Services.AddSingleton<ILLMService,     MockLlmService>();
 
-// always real vector search
+// Vector search (in-memory); depends on IEmbeddingService above
 builder.Services.AddSingleton<IVectorSearchService, VectorSearchService>();
 
-// framework plumbing
+// ---------------------------------------------------------------------
+// Standard ASP-NET plumbing
+// ---------------------------------------------------------------------
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -37,5 +44,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-// for WebApplicationFactory<Program>
+// Needed by WebApplicationFactory<Program> in the test project
 public partial class Program { }
