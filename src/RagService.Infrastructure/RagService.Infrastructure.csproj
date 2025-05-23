@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RagService.Domain\RagService.Domain.csproj" />
     <ProjectReference Include="..\RagService.Application\RagService.Application.csproj" />
+     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
