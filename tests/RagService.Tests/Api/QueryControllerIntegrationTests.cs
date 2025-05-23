@@ -1,20 +1,9 @@
-<<<<<<< HEAD
-// tests/RagService.Tests/Api/QueryControllerIntegrationTests.cs
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 using FluentAssertions;
 using RagService.Domain.Models;
 using RagService.Tests.Utilities;
 using Xunit;
-=======
-using System.Net;
-using System.Net.Http.Json;
-using FluentAssertions;
-using RagService.Domain.Models;
-using RagService.Tests.Utilities;
->>>>>>> 0fcfa3a5572acc68add741a2f800e7ec6462800a
 
 namespace RagService.Tests.Api
 {
