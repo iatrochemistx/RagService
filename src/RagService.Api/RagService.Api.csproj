@@ -12,13 +12,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Reference your Application and Infrastructure layers -->
     <ProjectReference Include="..\RagService.Application\RagService.Application.csproj" />
+    <ProjectReference Include="..\RagService.Infrastructure\RagService.Infrastructure.csproj" />
   </ItemGroup>
-  <ItemGroup>
-  <None Include="data\**\*">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
-</ItemGroup>
 
+  <ItemGroup>
+    <!-- Ensure /data files are copied to output -->
+    <None Include="data\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

@@ -1,15 +1,24 @@
+// src/RagService.Api/Program.cs
+using RagService.Application.Interfaces;
+using RagService.Infrastructure.Embeddings;
+using RagService.Infrastructure.Llm;
+using RagService.Infrastructure.VectorSearch;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ─── Register your RAG infrastructure services ─────────────────────────────────
+builder.Services.AddSingleton<IEmbeddingService,    MockEmbeddingService>();
+builder.Services.AddSingleton<ILLMService,          MockLlmService>();
+builder.Services.AddSingleton<IVectorSearchService, VectorSearchService>();
+// ────────────────────────────────────────────────────────────────────────────────
 
+// Add framework services
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();  
+var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -17,10 +26,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
+
+// Expose the Program class for WebApplicationFactory<Program>
 public partial class Program { }
