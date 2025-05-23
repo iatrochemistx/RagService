@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;                 // <-- add this
 using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
@@ -19,7 +20,10 @@ namespace RagService.Tests.VectorSearch
             // Arrange
             var mockEmbedder = new Mock<IEmbeddingService>();
             mockEmbedder
-                .Setup(e => e.EmbedAsync(It.IsAny<string>()))
+                // Explicitly include CancellationToken in the setup call
+                .Setup(e => e.EmbedAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new float[384]);  // dummy vector
 
             // Prepare a temporary data folder under the test output

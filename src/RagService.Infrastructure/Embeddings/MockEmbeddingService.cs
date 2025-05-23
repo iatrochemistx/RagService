@@ -8,7 +8,7 @@ public sealed class MockEmbeddingService : IEmbeddingService
 {
     private const int Dim = 384;
 
-    public Task<float[]> EmbedAsync(string text)
+       public Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
     {
         var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text));
         int seed = BitConverter.ToInt32(hash, 0);
@@ -19,5 +19,5 @@ public sealed class MockEmbeddingService : IEmbeddingService
             vec[i] = (float)(rng.NextDouble() * 2.0 - 1.0);
 
         return Task.FromResult(vec);
-    }
+    }   
 }
