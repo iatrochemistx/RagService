@@ -1,47 +1,53 @@
-// File: tests/RagService.Tests/Utilities/CustomWebAppFactory.cs
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using System;
-using System.IO;
-using RagService.Api;                    // Program
-using RagService.Application.Interfaces; // IEmbeddingService, ILlmService
-using RagService.Tests.Embedding;        // MockEmbeddingService
-using RagService.Tests.Llm;
-using RagService.Infrastructure.Embeddings;
-using RagService.Infrastructure.Llm;              // MockLlmService
+using System.Net;
+using System.Net.Http.Json;
+using FluentAssertions;
+using RagService.Domain.Models;
+using RagService.Tests.Utilities;
 
-namespace RagService.Tests.Utilities
+namespace RagService.Tests.Api
 {
-    /// <summary>
-    /// Bootstraps the API for integration tests, but replaces any
-    /// “real” network-bound services with in-process test doubles.
-    /// </summary>
-    public sealed class CustomWebAppFactory : WebApplicationFactory<Program>
+    public class QueryControllerIntegrationTests : IClassFixture<CustomWebAppFactory>
     {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        private readonly HttpClient _client;
+
+        public QueryControllerIntegrationTests(CustomWebAppFactory factory)
         {
-            // 1️⃣  Make sure the host can find Controllers + data\*.txt
-            //     (content root must point at the API project folder).
-            var apiDir = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory,          // …\tests\bin\Debug\net7.0
-                "..", "..", "..", "..",            // up to …\tests
-                "..",                              // up to repo root
-                "src", "RagService.Api"));         // API project folder
-            builder.UseContentRoot(apiDir);
+            _client = factory.CreateClient();
+        }
 
-            // 2️⃣  Swap out the real OpenAI services for mocks.
-            builder.ConfigureServices(services =>
-            {
-                // Remove anything the production code registered.
-                services.RemoveAll(typeof(IEmbeddingService));
-                services.RemoveAll(typeof(ILLMService));
+        [Fact]
+        public async Task Query_returns_documents_without_llm_response()
+        {
+            var response = await _client.GetAsync("/query?q=test");
 
-                // Register lightweight, deterministic test doubles.
-                services.AddSingleton<IEmbeddingService, MockEmbeddingService>();
-                services.AddSingleton<ILLMService, MockLlmService>();
-            });
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<RetrievalResult>();
+
+            result.Should().NotBeNull();
+            result!.Documents.Should().NotBeEmpty();
+            result.Response.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Query_with_llm_response_includes_answer()
+        {
+            var response = await _client.GetAsync("/query?q=test&response=true");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<RetrievalResult>();
+
+            result.Should().NotBeNull();
+            result!.Documents.Should().NotBeEmpty();
+            result.Response.Should().NotBeNull();
+            result.Response.Should().Contain("MOCK LLM ANSWER");
+        }
+
+        [Fact]
+        public async Task Missing_query_returns_bad_request()
+        {
+            var response = await _client.GetAsync("/query");
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
     }
 }

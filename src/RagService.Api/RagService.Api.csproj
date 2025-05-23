@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RagService.Application\RagService.Application.csproj" />
+    <ProjectReference Include="..\RagService.Infrastructure\RagService.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
   <None Include="data\**\*">

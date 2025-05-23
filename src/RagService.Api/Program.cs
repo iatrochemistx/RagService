@@ -1,5 +1,10 @@
 var builder = WebApplication.CreateBuilder(args);
 
+// Application services
+builder.Services.AddSingleton<RagService.Application.Interfaces.IEmbeddingService, RagService.Infrastructure.Embeddings.MockEmbeddingService>();
+builder.Services.AddSingleton<RagService.Application.Interfaces.ILLMService, RagService.Infrastructure.Llm.MockLlmService>();
+builder.Services.AddSingleton<RagService.Application.Interfaces.IVectorSearchService, RagService.Infrastructure.VectorSearch.VectorSearchService>();
+
 // Add services to the container.
 
 builder.Services.AddControllers();
