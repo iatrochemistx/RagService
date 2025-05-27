@@ -1,32 +1,34 @@
 // src/RagService.Api/Program.cs
 using RagService.Application.Interfaces;
+using RagService.Infrastructure;
 using RagService.Infrastructure.Embeddings;
 using RagService.Infrastructure.Llm;
 using RagService.Infrastructure.VectorSearch;
-using Microsoft.Extensions.Options;
-using RagService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------------------------------------------------------------------
-// TEMPORARY: RUN 100 % IN MOCK MODE
-// ---------------------------------------------------------------------
-
-// You can leave this Configure call; it’s harmless in mock mode and
-// makes it easy to switch back to real OpenAI later.
+// Bind OpenAI options (BaseUrl, model names, etc.)
 builder.Services.Configure<OpenAiOptions>(
     builder.Configuration.GetSection("OpenAI"));
 
-// Register **mock** services (no HTTP calls, deterministic behaviour)
-builder.Services.AddSingleton<IEmbeddingService, MockEmbeddingService>();
-builder.Services.AddSingleton<ILLMService,     MockLlmService>();
+// Decide runtime mode
+bool useMocks = builder.Configuration.GetValue<bool>("UseMocks");
 
-// Vector search (in-memory); depends on IEmbeddingService above
+if (useMocks)
+{
+    builder.Services.AddSingleton<IEmbeddingService, MockEmbeddingService>();
+    builder.Services.AddSingleton<ILLMService,     MockLlmService>();
+}
+else
+{
+    builder.Services.AddHttpClient<IEmbeddingService, OpenAiEmbeddingService>();
+    builder.Services.AddHttpClient<ILLMService,     OpenAiLlmService>();
+}
+
+// Retrieval layer (shared by both modes)
 builder.Services.AddSingleton<IVectorSearchService, VectorSearchService>();
 
-// ---------------------------------------------------------------------
-// Standard ASP-NET plumbing
-// ---------------------------------------------------------------------
+// Standard ASP.NET Core setup
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -44,5 +46,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-// Needed by WebApplicationFactory<Program> in the test project
+// For WebApplicationFactory in integration tests
 public partial class Program { }
