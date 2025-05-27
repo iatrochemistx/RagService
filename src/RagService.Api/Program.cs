@@ -1,32 +1,60 @@
 // src/RagService.Api/Program.cs
+using System.Net;
+using Polly;
+using Polly.Extensions.Http;  
 using RagService.Application.Interfaces;
+using RagService.Infrastructure;
 using RagService.Infrastructure.Embeddings;
 using RagService.Infrastructure.Llm;
 using RagService.Infrastructure.VectorSearch;
-using Microsoft.Extensions.Options;
-using RagService.Infrastructure;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------------------------------------------------------------------
-// TEMPORARY: RUN 100 % IN MOCK MODE
-// ---------------------------------------------------------------------
+// ---------- Resilience: retry with jitter ----------
+static IEnumerable<TimeSpan> BackoffWithJitter()
+{
+    var rand = new Random();
+    for (int i = 0; i < 3; i++)          // three retries
+    {
+        var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, i)); // 1s, 2s, 4s
+        yield return baseDelay + TimeSpan.FromMilliseconds(rand.Next(0, 500));
+    }
+}
 
-// You can leave this Configure call; it’s harmless in mock mode and
-// makes it easy to switch back to real OpenAI later.
+var retryPolicy = HttpPolicyExtensions
+    .HandleTransientHttpError()                                    // 5xx + network errors
+    .OrResult(r => r.StatusCode == HttpStatusCode.TooManyRequests) // 429
+    .WaitAndRetryAsync(BackoffWithJitter());
+
+// ---------- OpenAI options ----------
 builder.Services.Configure<OpenAiOptions>(
     builder.Configuration.GetSection("OpenAI"));
 
-// Register **mock** services (no HTTP calls, deterministic behaviour)
-builder.Services.AddSingleton<IEmbeddingService, MockEmbeddingService>();
-builder.Services.AddSingleton<ILLMService,     MockLlmService>();
+// ---------- Decide mock vs real ----------
+bool useMocks = builder.Configuration.GetValue<bool>("UseMocks");
 
-// Vector search (in-memory); depends on IEmbeddingService above
+if (useMocks)
+{
+    builder.Services.AddSingleton<IEmbeddingService, MockEmbeddingService>();
+    builder.Services.AddSingleton<ILLMService,     MockLlmService>();
+}
+else
+{
+    // Real OpenAI HTTP clients with retry & timeout
+    builder.Services.AddHttpClient<IEmbeddingService, OpenAiEmbeddingService>()
+                    .AddPolicyHandler(retryPolicy)
+                    .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+
+    builder.Services.AddHttpClient<ILLMService, OpenAiLlmService>()
+                    .AddPolicyHandler(retryPolicy)
+                    .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(30));
+}
+
+// ---------- Shared vector search ----------
 builder.Services.AddSingleton<IVectorSearchService, VectorSearchService>();
 
-// ---------------------------------------------------------------------
-// Standard ASP-NET plumbing
-// ---------------------------------------------------------------------
+// ---------- ASP-NET plumbing ----------
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -44,5 +72,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-// Needed by WebApplicationFactory<Program> in the test project
+// Needed by WebApplicationFactory in tests
 public partial class Program { }
