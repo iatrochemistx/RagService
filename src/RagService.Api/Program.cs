@@ -1,5 +1,7 @@
 // src/RagService.Api/Program.cs
 using System.Net;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Polly;
 using Polly.Extensions.Http;  
 using RagService.Application.Interfaces;
@@ -54,7 +56,45 @@ else
 // ---------- Shared vector search ----------
 builder.Services.AddSingleton<IVectorSearchService, VectorSearchService>();
 
-// ---------- ASP-NET plumbing ----------
+//Rate limiting
+var rateCfg       = builder.Configuration.GetSection("RateLimiting");
+int permitLimit   = rateCfg.GetValue<int>("PermitLimit");     // e.g. 60
+int windowSeconds = rateCfg.GetValue<int>("WindowSeconds");   // e.g. 60
+int queueLimit    = rateCfg.GetValue<int>("QueueLimit");      // e.g. 0
+
+builder.Services.AddRateLimiter(opts =>
+{
+    // Return 429 instead of 503 when throttled
+    opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Optional: custom body / Retry-After header
+    opts.OnRejected = async (ctx, token) =>
+    {
+        ctx.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        // add “Retry-After” = window length
+        ctx.HttpContext.Response.Headers["Retry-After"] = windowSeconds.ToString();
+        await ctx.HttpContext.Response.WriteAsync(
+            "Rate limit exceeded. Please try again later.", token);
+    };
+
+    // GLOBAL limiter — one bucket per client IP address
+    opts.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpCtx =>
+    {
+        var ip = httpCtx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey : ip,                 // each IP gets its own counter
+            factory      : _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit          = permitLimit,
+                Window               = TimeSpan.FromSeconds(windowSeconds),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit           = queueLimit,
+                AutoReplenishment    = true
+            });
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -69,6 +109,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.Run();
 
