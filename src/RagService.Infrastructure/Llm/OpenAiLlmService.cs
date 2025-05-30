@@ -31,7 +31,7 @@ namespace RagService.Infrastructure.Llm
             ILogger<OpenAiLlmService> logger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger     = logger     ?? throw new ArgumentNullException(nameof(logger));
 
             var opts = options?.Value ?? throw new ArgumentNullException(nameof(options));
             if (string.IsNullOrWhiteSpace(opts.ApiKey))
@@ -39,7 +39,8 @@ namespace RagService.Infrastructure.Llm
 
             _model = opts.ChatModel;
             _httpClient.BaseAddress = new Uri(opts.BaseUrl);
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", opts.ApiKey);
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", opts.ApiKey);
         }
 
         /// <inheritdoc />
@@ -58,33 +59,46 @@ namespace RagService.Infrastructure.Llm
             // Prepare request payload
             var messages = new[] {
                 new ChatMessage("system", systemPrompt),
-                new ChatMessage("user", query)
+                new ChatMessage("user",   query)
             };
             var payload = new ChatRequest(_model, messages);
 
             // Send request
             using var response = await _httpClient.PostAsJsonAsync("v1/chat/completions", payload, cancellationToken)
-                .ConfigureAwait(false);
+                                                  .ConfigureAwait(false);
+
+            /* ---------- NEW: log JSON body on non-success for clear diagnostics ---------- */
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("OpenAI Chat error {Status}: {Body}",
+                                   (int)response.StatusCode, body);
+            }
+            /* --------------------------------------------------------------------------- */
+
             response.EnsureSuccessStatusCode();
 
             var chatResponse = await response.Content
-                .ReadFromJsonAsync<ChatResponse>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                                             .ReadFromJsonAsync<ChatResponse>(cancellationToken: cancellationToken)
+                                             .ConfigureAwait(false);
 
             var message = chatResponse?.Choices?.FirstOrDefault()?.Message;
             if (message == null || string.IsNullOrWhiteSpace(message.Content))
                 throw new InvalidOperationException("OpenAI returned no chat response.");
 
-            _logger.LogInformation("Received chat response: {Snippet}", message.Content[..Math.Min(50, message.Content.Length)]);
+            _logger.LogInformation("Received chat response: {Snippet}",
+                                   message.Content[..Math.Min(50, message.Content.Length)]);
             return message.Content.Trim();
         }
 
+        /* ---------- DTOs ---------- */
+
         private sealed record ChatMessage(
-            [property: JsonPropertyName("role")] string Role,
+            [property: JsonPropertyName("role")]    string Role,
             [property: JsonPropertyName("content")] string Content);
 
         private sealed record ChatRequest(
-            [property: JsonPropertyName("model")] string Model,
+            [property: JsonPropertyName("model")]    string Model,
             [property: JsonPropertyName("messages")] IEnumerable<ChatMessage> Messages);
 
         private sealed record Choice(

@@ -1,11 +1,12 @@
 using System;
 using System.IO;
-using System.Threading;                 // <-- add this
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
 using Xunit;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;    
 using RagService.Application.Interfaces;
 using RagService.Infrastructure.VectorSearch;
 using RagService.Domain.Models;
@@ -20,7 +21,6 @@ namespace RagService.Tests.VectorSearch
             // Arrange
             var mockEmbedder = new Mock<IEmbeddingService>();
             mockEmbedder
-                // Explicitly include CancellationToken in the setup call
                 .Setup(e => e.EmbedAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
@@ -42,8 +42,15 @@ namespace RagService.Tests.VectorSearch
             var mockEnv = new Mock<IHostEnvironment>();
             mockEnv.Setup(e => e.ContentRootPath).Returns(testOutput);
 
+            // Mock logger for VectorSearchService
+            var mockLogger = new Mock<ILogger<VectorSearchService>>();
+
             // Act
-            var service = new VectorSearchService(mockEmbedder.Object, mockEnv.Object);
+            var service = new VectorSearchService(
+                mockEmbedder.Object,
+                mockEnv.Object,
+                mockLogger.Object // <--- logger injected here
+            );
             var results = await service.GetTopDocumentsAsync("anything");
 
             // Assert

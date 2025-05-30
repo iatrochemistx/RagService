@@ -7,6 +7,7 @@
     <UserSecretsId>0ca398cc-313c-4871-a911-96cb430b6044</UserSecretsId>
   </PropertyGroup>
 
+  <!-- NuGet packages -->
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.20" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="9.0.1" />
@@ -14,17 +15,21 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
+  <!-- Layer references -->
   <ItemGroup>
-    <!-- Reference your Application and Infrastructure layers -->
     <ProjectReference Include="..\RagService.Application\RagService.Application.csproj" />
     <ProjectReference Include="..\RagService.Infrastructure\RagService.Infrastructure.csproj" />
+  
   </ItemGroup>
 
+
   <ItemGroup>
-    <!-- Ensure /data files are copied to output -->
-    <None Include="data\**\*">
+    <Content Include="data\**\*">
+      <!-- keep it in bin/Debug|Release -->
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+      <!-- and also in publish/ so Docker gets it -->
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

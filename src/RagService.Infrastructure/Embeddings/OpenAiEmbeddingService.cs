@@ -29,7 +29,7 @@ namespace RagService.Infrastructure.Embeddings
             ILogger<OpenAiEmbeddingService> logger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger     = logger     ?? throw new ArgumentNullException(nameof(logger));
 
             var opts = options?.Value ?? throw new ArgumentNullException(nameof(options));
             if (string.IsNullOrWhiteSpace(opts.ApiKey))
@@ -37,11 +37,14 @@ namespace RagService.Infrastructure.Embeddings
 
             _model = opts.EmbeddingModel;
             _httpClient.BaseAddress = new Uri(opts.BaseUrl);
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", opts.ApiKey);
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", opts.ApiKey);
         }
 
         /// <inheritdoc />
-        public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
+        public async Task<float[]> EmbedAsync(
+            string text,
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(text))
                 throw new ArgumentException("Text must not be empty.", nameof(text));
@@ -49,12 +52,26 @@ namespace RagService.Infrastructure.Embeddings
             _logger.LogInformation("Requesting embedding for text length {Length} characters.", text.Length);
 
             var payload = new { input = text, model = _model };
-            using var response = await _httpClient.PostAsJsonAsync("v1/embeddings", payload, cancellationToken)
-                                                .ConfigureAwait(false);
+
+            using var response = await _httpClient.PostAsJsonAsync(
+                                        "v1/embeddings", payload, cancellationToken)
+                                    .ConfigureAwait(false);
+
+            /* ---------- NEW: log JSON body on non-success for clear diagnostics ---------- */
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("OpenAI Embedding error {Status}: {Body}",
+                                   (int)response.StatusCode, body);
+            }
+            /* --------------------------------------------------------------------------- */
+
             response.EnsureSuccessStatusCode();
 
-            var embeddingResponse = await response.Content.ReadFromJsonAsync<EmbeddingResponse>(cancellationToken: cancellationToken)
-                                            .ConfigureAwait(false);
+            var embeddingResponse = await response.Content
+                                                  .ReadFromJsonAsync<EmbeddingResponse>(cancellationToken: cancellationToken)
+                                                  .ConfigureAwait(false);
+
             var first = embeddingResponse?.Data?.FirstOrDefault();
             if (first?.Embedding is not { Length: > 0 } embedding)
                 throw new InvalidOperationException("No embedding data returned from OpenAI.");

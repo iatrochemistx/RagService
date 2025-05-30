@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using RagService.Application.Interfaces;
 using RagService.Domain.Models;
+using Polly;
+using Polly.CircuitBreaker;
+
 
 namespace RagService.Api.Controllers
 {
