@@ -47,8 +47,7 @@ namespace RagService.Infrastructure.VectorSearch
 
         /* ---------------------------------------------------------- API */
 
-        public Task<List<Document>> GetTopDocumentsAsync(
-            string query, int topK = 1, CancellationToken ct = default) =>
+        public Task<List<Document>> GetTopDocumentsAsync(string query, int topK = 1, CancellationToken ct = default) =>
             ExecuteAsync(() => _embedder.EmbedAsync(query, ct), topK, ct);
 
         public Task<List<Document>> GetTopDocumentsAsync(
@@ -137,19 +136,28 @@ namespace RagService.Infrastructure.VectorSearch
             }
         }
 
-
-
+        
         private IEnumerable<(Document, string)> LoadDocumentsFromDisk()
         {
-            foreach (var file in Directory.GetFiles(_dataFolder, "*.txt"))
+            var patterns = new[] { "*.txt", "*.md" };   //txt,markdown 
+            var seen     = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var pattern in patterns)
             {
-                yield return (new Document
+                foreach (var file in Directory.EnumerateFiles(_dataFolder, pattern))
                 {
-                    FileName = Path.GetFileName(file),
-                    Text     = File.ReadAllText(file)
-                }, File.ReadAllText(file));
+                    if (!seen.Add(file)) continue;      
+                    var text = File.ReadAllText(file);
+
+                    yield return (new Document
+                    {
+                        FileName = Path.GetFileName(file),
+                        Text     = text
+                    }, text);
+                }
             }
         }
+
 
         private List<Document> ComputeTopDocuments(float[] qVec, int topK)
         {
