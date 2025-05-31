@@ -63,7 +63,7 @@ namespace RagService.Api.Controllers
             _log.LogInformation("Received query: {Query}", q);
 
             // 1) Retrieve top documents
-            var docs = await _search.GetTopDocumentsAsync(q,cancellationToken: ct);
+            var docs = await _search.GetTopDocumentsAsync(q,topK: 1, cancellationToken: ct);
 
             // 2) Optionally generate LLM response
             string? answer = null;
