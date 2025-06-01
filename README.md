@@ -20,7 +20,6 @@ Replace `sk-...` with your OpenAI API key:
 ```bash
 docker run -d --name ragservice-real   -e OPENAI__ApiKey=sk-...   -e ASPNETCORE_ENVIRONMENT=Development   -p 5241:8080 quantdevxx/ragservice:latest
 ```
-
 ---
 
 ### 3. Access the API
@@ -30,6 +29,11 @@ docker run -d --name ragservice-real   -e OPENAI__ApiKey=sk-...   -e ASPNETCORE_
   - Parameters:
     - `q` (string): The user's query
     - `response` (boolean): Whether to include an LLM-generated answer
+
+> **Port note:**  
+> The examples map container port **8080** to host port **5241** (`-p 5241:8080`).  
+> If 5241 is already in use on your machine, feel free to choose any free host port, e.g.  
+> `-p 9000:8080`, and then open Swagger at `http://localhost:9000/swagger`.
 
 ---
 
