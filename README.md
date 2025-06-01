@@ -45,7 +45,8 @@ Open your browser to [http://localhost:5241/swagger](http://localhost:5241/swagg
 
 #### Option B: Curl (Terminal)
 ```bash
-curl "http://localhost:5241/query?q=Who%20discovered%20penicillin&response=true"
+curl "http://localhost:5241/query?q=\"Who discovered penicillin\"&response=true"
+
 ```
 
 ---
